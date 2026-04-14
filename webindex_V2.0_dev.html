@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bitácora Diario — Reporte Técnico</title>
+  <style>
+    :root { --bg:#0b1220; --card:#111a2e; --muted:#9fb0d0; --txt:#e8efff; --acc:#5eead4; --warn:#fbbf24; --danger:#fb7185; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial; background: linear-gradient(180deg,#070b14,var(--bg)); color:var(--txt); }
+    header { padding:24px 16px 8px; max-width:1200px; margin:0 auto; }
+    h1 { margin:0 0 6px; font-size:20px; }
+    p { margin:0; color:var(--muted); font-size:13px; line-height:1.35; }
+    .wrap { max-width:1200px; margin:0 auto; padding:16px; display:grid; gap:12px; }
+    .card { background: rgba(17,26,46,.92); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:14px; box-shadow:0 8px 28px rgba(0,0,0,.35); }
+    .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:10px; }
+    label { display:block; font-size:12px; color:var(--muted); margin:2px 0 6px; }
+    input, select, textarea { width:100%; padding:10px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.22); color:var(--txt); outline:none; }
+    textarea { resize:vertical; min-height:42px; }
+    input:focus, select:focus, textarea:focus { border-color: rgba(94,234,212,.6); box-shadow:0 0 0 3px rgba(94,234,212,.12); }
+
+    .row2{grid-column:span 2;} .row3{grid-column:span 3;} .row4{grid-column:span 4;} .row5{grid-column:span 5;}
+    .row6{grid-column:span 6;} .row7{grid-column:span 7;} .row8{grid-column:span 8;} .row9{grid-column:span 9;} .row12{grid-column:span 12;}
+
+    .actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    button { border:0; border-radius:12px; padding:10px 12px; background: rgba(255,255,255,.10); color:var(--txt); cursor:pointer; transition: transform .06s ease, background .15s ease; }
+    button:hover { background: rgba(255,255,255,.14); }
+    button:active { transform: translateY(1px); }
+    button[disabled] { opacity:.55; cursor:not-allowed; }
+    .primary { background: rgba(94,234,212,.18); border:1px solid rgba(94,234,212,.35); }
+    .primary:hover { background: rgba(94,234,212,.24); }
+    .danger { background: rgba(251,113,133,.14); border:1px solid rgba(251,113,133,.35); }
+    .danger:hover { background: rgba(251,113,133,.20); }
+    .small { padding:8px 10px; border-radius:10px; font-size:12px; }
+
+    .hint { font-size:12px; color:var(--muted); }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; border:1px solid rgba(255,255,255,.18); color:var(--muted); }
+    .pill.ok { border-color: rgba(94,234,212,.35); color: rgba(94,234,212,.95); }
+    .status { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+    table { width:100%; border-collapse:collapse; overflow:hidden; border-radius:12px; }
+    th, td { border-bottom:1px solid rgba(255,255,255,.08); padding:10px 8px; text-align:left; vertical-align:top; font-size:12px; }
+    th { color:var(--muted); font-weight:600; background: rgba(0,0,0,.18); position: sticky; top:0; }
+    tr:hover td { background: rgba(255,255,255,.04); }
+    tr.sent td { opacity:.75; }
+
+    .footer { padding: 0 16px 20px; max-width:1200px; margin:0 auto; color:var(--muted); font-size:12px; }
+    @media (max-width: 980px) { .row2,.row3,.row4,.row5,.row6,.row7,.row8,.row9 { grid-column: span 12; } header { padding-top:18px; } }
+
+    /* Técnicos (puntitos + click) */
+    .tecnicos-grid { display:flex; flex-wrap:wrap; gap:10px; }
+    .chip { user-select:none; display:inline-flex; align-items:center; gap:8px; padding:10px 12px; border-radius:999px; border:1px solid rgba(255,255,255,.16); background: rgba(0,0,0,.18); cursor:pointer; }
+    .chip:hover { background: rgba(255,255,255,.08); }
+    .dot { width:10px; height:10px; border-radius:999px; border:1px solid rgba(255,255,255,.35); background: transparent; }
+    .chip.selected { border-color: rgba(94,234,212,.55); background: rgba(94,234,212,.12); }
+    .chip.selected .dot { background: rgba(94,234,212,.95); border-color: rgba(94,234,212,.95); }
+    .chip .name { font-size:13px; }
+
+    /* Equipos múltiples */
+    .equipos-grid { display:grid; grid-template-columns: repeat(12, 1fr); gap:10px; }
+    .equipos-grid .eq { grid-column: span 3; }
+    @media (max-width: 980px) { .equipos-grid .eq { grid-column: span 12; } }
+
+    /* Modal */
+    .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); align-items:center; justify-content:center; padding:16px; z-index:9999; }
+    .modal { max-width:520px; width:100%; background:rgba(17,26,46,.98); border:1px solid rgba(255,255,255,.10); border-radius:14px; padding:14px; box-shadow:0 18px 60px rgba(0,0,0,.55); }
+    .modal-title { font-weight:700; margin-bottom:6px; }
+
+    /* =========================================================
+       ✅ Mejoras móvil (1), (2), (3) — SOLO CSS
+       ========================================================= */
+
+    /* Evitar corte general */
+    html, body { max-width: 100%; overflow-x: hidden; }
+
+    @media (max-width: 600px) {
+      /* Tipografía/espaciado */
+      header { padding:18px 12px 6px; }
+      h1 { font-size:18px; }
+      p { font-size:12px; }
+
+      .wrap { padding:10px; gap:10px; }
+      .card { padding:12px; }
+
+      /* Botones en columna */
+      .actions { flex-direction:column; align-items:stretch; }
+      .actions button { width:100%; }
+
+      /* Chips compactos */
+      .tecnicos-grid { gap:8px; }
+      .chip { padding:9px 11px; }
+      .chip .name { font-size:12px; }
+
+      /* =========================================================
+         ✅ FIX DEFINITIVO: Tabla “responsive” tipo tarjetas
+         - Se elimina el “corte” en vertical
+         - Todo se adapta al ancho del celular
+         ========================================================= */
+
+      /* El wrapper ya no limita altura en móvil (evita que “falte” contenido) */
+      #tablaWrap { max-height: none !important; overflow: visible !important; }
+
+      /* Ocultamos encabezado y convertimos filas en bloques */
+      #tabla thead { display:none; }
+      #tabla, #tabla tbody, #tabla tr, #tabla td { display:block; width:100%; }
+
+      /* Cada fila como “card” */
+      #tabla tr {
+        border:1px solid rgba(255,255,255,.10);
+        border-radius:12px;
+        overflow:hidden;
+        margin-bottom:10px;
+        background: rgba(0,0,0,.10);
+      }
+
+      /* Evitar hover raro en móvil */
+      #tabla tr:hover td { background: transparent; }
+
+      /* Cada celda en dos columnas: etiqueta + valor */
+      #tabla td {
+        border-bottom:1px solid rgba(255,255,255,.08);
+        padding:10px 10px;
+        font-size:12px;
+        display:flex;
+        gap:12px;
+        justify-content:space-between;
+        align-items:flex-start;
+      }
+      #tabla td:last-child { border-bottom:0; }
+
+      /* Etiquetas */
+      #tabla td::before {
+        content:"";
+        flex:0 0 42%;
+        max-width:42%;
+        color: var(--muted);
+        font-weight:600;
+      }
+
+      /* Labels por columna (sin tocar HTML/JS) */
+      #tabla td:nth-child(1)::before { content:"Fecha"; }
+      #tabla td:nth-child(2)::before { content:"Técnico"; }
+      #tabla td:nth-child(3)::before { content:"Tipo"; }
+      #tabla td:nth-child(4)::before { content:"Equipo"; }
+      #tabla td:nth-child(5)::before { content:"Descripción"; }
+      #tabla td:nth-child(6)::before { content:"Observaciones / Guía"; }
+      #tabla td:nth-child(7)::before { content:"Relacionado"; }
+      #tabla td:nth-child(8)::before { content:"Notas adicionales"; }
+      #tabla td:nth-child(9)::before { content:"Acción"; }
+
+      /* Que el valor (derecha) rompa línea y no se salga */
+      #tabla td { word-break: break-word; }
+      #tabla td > * { max-width:100%; }
+
+      /* Botones dentro de la tabla más cómodos */
+      #tabla td button { width:auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Bitácora Diario — Carga de Reporte Técnico</h1>
+    <p>Selecciona técnicos con un click. En <b>Preventiva + AA</b> puedes agregar varios equipos y se guardan como filas separadas. La descripción se fija como “Mantención preventiva”.</p>
+  </header>
+
+  <div class="wrap">
+    <div class="card">
+      <div class="grid">
+        <div class="row3">
+          <label for="fecha">Fecha</label>
+          <input id="fecha" type="date" />
+        </div>
+
+        <div class="row6">
+          <label>Técnico(s)</label>
+          <div id="tecnicosWrap" class="tecnicos-grid" aria-label="Selección de técnicos"></div>
+          <input id="tecnico" type="hidden" value="" />
+          <div class="hint">Click para seleccionar / deseleccionar. Se guardan como: <b>Angel / Antonia</b></div>
+        </div>
+
+        <div class="row3">
+          <label for="tipo">Tipo</label>
+          <select id="tipo">
+            <option value="">(vacío)</option>
+            <option>Preventiva</option>
+            <option>Correctiva</option>
+            <option>Emergencia</option>
+            <option>Otro</option>
+          </select>
+        </div>
+
+        <div class="row3">
+          <label for="relacionado">Relacionado</label>
+          <select id="relacionado">
+            <option value="">(vacío)</option>
+            <option>AA</option>
+            <option>Presurizador</option>
+            <option>Puertas Caja Escala</option>
+            <option>Otro</option>
+          </select>
+        </div>
+
+        <!-- Modo múltiple: Preventiva + AA -->
+        <div class="row12" id="equiposWrap" style="display:none;">
+          <label>Equipos AA (modo múltiple)</label>
+          <div id="equiposList" class="equipos-grid"></div>
+          <div class="actions" style="margin-top:10px;">
+            <button id="btnMasEquipo" class="small primary" type="button">＋ Agregar otro equipo</button>
+            <button id="btnMenosEquipo" class="small danger" type="button">－ Quitar último</button>
+            <span class="hint">Cada equipo se guardará como una fila independiente.</span>
+          </div>
+        </div>
+
+        <!-- Modo normal: un solo equipo -->
+        <div class="row3" id="equipoSingleWrap">
+          <label for="equipo">Equipo</label>
+          <input id="equipo" type="text" placeholder="Ej: UI-1.1, UE-3.5, 3.5, Caja Escala..." />
+        </div>
+
+        <div class="row9">
+          <label for="descripcion">Descripción</label>
+          <textarea id="descripcion" placeholder="Qué se hizo (texto libre)"></textarea>
+          <div class="hint" id="descHint" style="margin-top:6px; display:none;">En Preventiva + AA, la descripción queda fija y no se puede editar.</div>
+        </div>
+
+        <div class="row6">
+          <label for="obs">Observaciones / Guía</label>
+          <textarea id="obs" placeholder="Recomendaciones, hallazgos, guía..."></textarea>
+        </div>
+
+        <div class="row6">
+          <label for="notas">Notas adicionales</label>
+          <textarea id="notas" placeholder="Información extra"></textarea>
+        </div>
+
+        <div class="row12 actions">
+          <button class="primary" id="btnAgregar" type="button">➕ Agregar fila(s)</button>
+          <button id="btnGuardar" type="button">💾 Guardar</button>
+          <button id="btnCargar" type="button">📂 Cargar</button>
+          <button id="btnLimpiarForm" class="small" type="button">🧹 Limpiar formulario</button>
+          <span class="hint">Tip: en Preventiva + AA agrega 4–5 equipos y presiona “Agregar fila(s)”.</span>
+        </div>
+
+        <div class="row12 status">
+          <span class="pill">Filas: <span id="count">0</span></span>
+          <span class="pill">Pendientes: <span id="pendingCount">0</span></span>
+          <span class="pill">Enviadas: <span id="sentCount">0</span></span>
+          <span id="msg" class="hint"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="actions" style="justify-content:space-between;">
+        <div class="actions">
+          <button class="primary" id="btnCSV" type="button">⬇️ Descargar CSV</button>
+          <button class="primary" id="btnEnviarSheets" type="button">📤 Enviar a Google Sheets</button>
+          <button id="btnToggleEnviados" type="button">👁️ Mostrar enviados</button>
+          <button id="btnCopiar" type="button">📋 Copiar tabla</button>
+          <button class="danger" id="btnBorrarTodo" type="button">🗑️ Borrar todo</button>
+        </div>
+        <div class="hint">CSV con separador “;” (Excel en español). Enviar solo manda lo <b>pendiente</b>.</div>
+      </div>
+
+      <div id="tablaWrap" style="margin-top:12px; overflow:auto; max-height: 52vh; border-radius:12px;">
+        <table id="tabla">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Técnico</th>
+              <th>Tipo</th>
+              <th>Equipo</th>
+              <th>Descripción</th>
+              <th>Observaciones / Guía</th>
+              <th>Relacionado</th>
+              <th>Notas adicionales</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div>✅ Enviar a Sheets: se manda <b>solo lo nuevo</b> desde el último envío y queda marcado como “Enviado”. Por defecto, las enviadas se ocultan.</div>
+  </div>
+
+  <!-- Modal Confirmación (evita window.confirm que puede fallar en preview/iframes) -->
+  <div id="modalOverlay" class="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div id="modalTitle" class="modal-title">¿Borrar todo?</div>
+      <div class="hint" style="margin-bottom:12px;">Esto eliminará <b>todas</b> las filas (pendientes y enviadas) de este navegador.</div>
+      <div class="actions" style="justify-content:flex-end;">
+        <button id="btnModalCancel" type="button">Cancelar</button>
+        <button id="btnModalOk" class="danger" type="button">Sí, borrar</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // =========================================================
+  // ✅ CONFIG GOOGLE SHEETS (pega tu URL acá)
+  // =========================================================
+  const SHEETS_ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbw0sD8pfHt1hb2RUeg-ZQs4Viu-jZ2MKZqIYGuj8oiSzUV4A86eN5WGKuyKx-vh2JFe/exec";
+  const SHEETS_USE_TOKEN = false;
+  const SHEETS_TOKEN = "CAMBIA_ESTE_TOKEN";
+
+  const STORAGE_KEY = "bitacora_diaria_v4"; // v4: incluye sent + showSent
+  const CSV_SEPARATOR = ";";
+
+  const $ = (id) => document.getElementById(id);
+  const state = { rows: [], showSent: false };
+
+  // ===== Helpers =====
+  function todayISO() {
+    const d = new Date();
+    const tzOff = d.getTimezoneOffset() * 60000;
+    return new Date(d - tzOff).toISOString().slice(0, 10);
+  }
+
+  function normalizeInput(s) { return (s ?? "").toString().trim(); }
+
+  function setMsg(text) { $("msg").textContent = text || ""; }
+
+  function escapeHTML(str) {
+    return (str ?? "").toString().replace(/[&<>"']/g, m => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    }[m]));
+  }
+
+  function uid() {
+    return "r_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+  }
+
+  // ===== Técnicos (chips toggle) =====
+  const TECNICOS = [
+    { full: "Angel Montero", first: "Angel" },
+    { full: "Antonia Garrido", first: "Antonia" },
+    { full: "Omar Quezada", first: "Omar" },
+    { full: "Marcos Gaete", first: "Marcos" },
+  ];
+
+  const selectedTecnicos = new Set();
+
+  function syncTecnicosHidden() {
+    $("tecnico").value = Array.from(selectedTecnicos).join(" / ");
+  }
+
+  function renderTecnicosChips() {
+    const wrap = $("tecnicosWrap");
+    wrap.innerHTML = "";
+
+    TECNICOS.forEach(t => {
+      const isSelected = selectedTecnicos.has(t.first);
+      const chip = document.createElement("div");
+      chip.className = "chip" + (isSelected ? " selected" : "");
+      chip.setAttribute("role", "button");
+      chip.setAttribute("tabindex", "0");
+      chip.innerHTML = `<span class="dot" aria-hidden="true"></span><span class="name">${escapeHTML(t.full)}</span>`;
+
+      function toggle() {
+        if (selectedTecnicos.has(t.first)) selectedTecnicos.delete(t.first);
+        else selectedTecnicos.add(t.first);
+        syncTecnicosHidden();
+        renderTecnicosChips();
+      }
+
+      chip.addEventListener("click", toggle);
+      chip.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+      });
+
+      wrap.appendChild(chip);
+    });
+  }
+
+  function getTecnicosValue() {
+    return normalizeInput($("tecnico").value);
+  }
+
+  // ===== Reglas: Preventiva + AA =====
+  function isPreventivaAA() {
+    return normalizeInput($("tipo").value) === "Preventiva" && normalizeInput($("relacionado").value) === "AA";
+  }
+
+  function setDescripcionMode(forceClear = false) {
+    const d = $("descripcion");
+    const hint = $("descHint");
+
+    if (forceClear) {
+      d.removeAttribute("readonly");
+      d.value = "";
+      hint.style.display = "none";
+      return;
+    }
+
+    if (isPreventivaAA()) {
+      d.value = "Mantención preventiva";
+      d.setAttribute("readonly", "readonly");
+      hint.style.display = "block";
+    } else {
+      d.removeAttribute("readonly");
+      hint.style.display = "none";
+      if (normalizeInput(d.value) === "Mantención preventiva") d.value = "";
+    }
+  }
+
+  // ===== Equipos múltiples =====
+  function toggleModoEquipos() {
+    const multi = isPreventivaAA();
+    $("equiposWrap").style.display = multi ? "block" : "none";
+    $("equipoSingleWrap").style.display = multi ? "none" : "block";
+    if (multi) setupEquiposMultiples(false);
+  }
+
+  function createEquipoInput(value = "") {
+    const div = document.createElement("div");
+    div.className = "eq";
+    div.innerHTML = `<input data-eq type="text" placeholder="Ej: UI-1.1, UI-1.2, UE-3.5..." value="${escapeHTML(value)}" />`;
+    return div;
+  }
+
+  function setupEquiposMultiples(reset = false) {
+    const list = $("equiposList");
+    if (reset) list.innerHTML = "";
+    if (list.children.length === 0) list.appendChild(createEquipoInput());
+  }
+
+  function getEquiposMultiples() {
+    return Array.from(document.querySelectorAll("input[data-eq]"))
+      .map(i => normalizeInput(i.value))
+      .filter(v => v.length > 0);
+  }
+
+  // ===== Tabla =====
+  function countPending() {
+    return state.rows.filter(r => !r.sent).length;
+  }
+
+  function countSent() {
+    return state.rows.filter(r => !!r.sent).length;
+  }
+
+  function render() {
+    $("count").textContent = String(state.rows.length);
+    $("pendingCount").textContent = String(countPending());
+    $("sentCount").textContent = String(countSent());
+
+    const canSend = countPending() > 0;
+    $("btnEnviarSheets").disabled = !canSend;
+
+    $("btnToggleEnviados").textContent = state.showSent ? "🙈 Ocultar enviados" : "👁️ Mostrar enviados";
+
+    const tb = $("tbody");
+    tb.innerHTML = "";
+
+    const rowsToShow = state.showSent ? state.rows : state.rows.filter(r => !r.sent);
+
+    rowsToShow.forEach((r) => {
+      const idx = state.rows.findIndex(x => x.id === r.id);
+      if (idx < 0) return;
+
+      const tr = document.createElement("tr");
+      if (r.sent) tr.classList.add("sent");
+
+      const actionHtml = r.sent
+        ? `<span class="pill ok">Enviado</span> <button class="small danger" data-del="${idx}" type="button">Eliminar</button>`
+        : `<button class="small danger" data-del="${idx}" type="button">Eliminar</button>`;
+
+      tr.innerHTML = `
+        <td>${escapeHTML(r.fecha)}</td>
+        <td>${escapeHTML(r.tecnico)}</td>
+        <td>${escapeHTML(r.tipo)}</td>
+        <td>${escapeHTML(r.equipo)}</td>
+        <td>${escapeHTML(r.descripcion)}</td>
+        <td>${escapeHTML(r.obs)}</td>
+        <td>${escapeHTML(r.relacionado)}</td>
+        <td>${escapeHTML(r.notas)}</td>
+        <td>${actionHtml}</td>
+      `;
+      tb.appendChild(tr);
+    });
+
+    tb.querySelectorAll("button[data-del]").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const i = Number(e.currentTarget.getAttribute("data-del"));
+        state.rows.splice(i, 1);
+        saveLocal(true);
+        render();
+      });
+    });
+  }
+
+  // ===== Agregar filas =====
+  function rowBaseFromForm() {
+    return {
+      fecha: normalizeInput($("fecha").value),
+      tecnico: getTecnicosValue(),
+      tipo: normalizeInput($("tipo").value),
+      descripcion: normalizeInput($("descripcion").value),
+      obs: normalizeInput($("obs").value),
+      relacionado: normalizeInput($("relacionado").value),
+      notas: normalizeInput($("notas").value),
+    };
+  }
+
+  function addRowsFromForm() {
+    const base = rowBaseFromForm();
+    const hasSomething = Object.values(base).some(v => (v || "").length > 0) || normalizeInput($("equipo").value).length > 0;
+    if (!hasSomething) { setMsg("El formulario está vacío."); return; }
+
+    if (isPreventivaAA()) {
+      const equipos = getEquiposMultiples();
+      if (equipos.length === 0) { setMsg("Agrega al menos 1 equipo."); return; }
+
+      equipos.forEach(eq => state.rows.push({
+        id: uid(),
+        sent: false,
+        ...base,
+        equipo: eq
+      }));
+
+      setMsg("Se agregaron " + equipos.length + " filas (una por equipo)." );
+      saveLocal(true);
+      render();
+      clearFormKeepFecha();
+      setupEquiposMultiples(true);
+      return;
+    }
+
+    const equipo = normalizeInput($("equipo").value);
+    state.rows.push({ id: uid(), sent: false, ...base, equipo });
+    setMsg("Fila agregada.");
+    saveLocal(true);
+    render();
+    clearFormKeepFecha();
+  }
+
+  function clearFormKeepFecha() {
+    const keepFecha = $("fecha").value;
+
+    selectedTecnicos.clear();
+    syncTecnicosHidden();
+    renderTecnicosChips();
+
+    $("tipo").value = "";
+    $("relacionado").value = "";
+    $("equipo").value = "";
+    $("obs").value = "";
+    $("notas").value = "";
+
+    setDescripcionMode(true);
+
+    $("equiposWrap").style.display = "none";
+    $("equipoSingleWrap").style.display = "block";
+
+    $("fecha").value = keepFecha;
+  }
+
+  // ===== Export / Copy / Storage =====
+  function csvCell(v) {
+    const s = (v ?? "").toString();
+    if (s.includes(CSV_SEPARATOR) || s.includes('"') || s.includes("\n")) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  function toCSV(rows) {
+    const headers = ["Fecha", "Técnico", "Tipo", "Equipo", "Descripción", "Observaciones / Guía", "Relacionado", "Notas adicionales"];
+    const lines = [];
+    lines.push(headers.map(csvCell).join(CSV_SEPARATOR));
+    for (const r of rows) {
+      lines.push([r.fecha, r.tecnico, r.tipo, r.equipo, r.descripcion, r.obs, r.relacionado, r.notas].map(csvCell).join(CSV_SEPARATOR));
+    }
+    return lines.join("\n");
+  }
+
+  function download(filename, text, mime = "text/plain") {
+    const blob = new Blob([text], { type: mime });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function copyTableAsTSV() {
+    const headers = ["Fecha", "Técnico", "Tipo", "Equipo", "Descripción", "Observaciones / Guía", "Relacionado", "Notas adicionales"];
+    const lines = [];
+    lines.push(headers.join("\t"));
+    for (const r of state.rows) {
+      lines.push([r.fecha, r.tecnico, r.tipo, r.equipo, r.descripcion, r.obs, r.relacionado, r.notas].join("\t"));
+    }
+    await navigator.clipboard.writeText(lines.join("\n"));
+    setMsg("Tabla copiada (TSV). Pega en Excel.");
+  }
+
+  function saveLocal(silent = false) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows: state.rows, showSent: !!state.showSent }));
+    if (!silent) setMsg("Guardado en este navegador.");
+  }
+
+  function loadLocal() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) { setMsg("No hay datos guardados."); return; }
+    try {
+      const parsed = JSON.parse(raw);
+      const rows = Array.isArray(parsed) ? parsed : (parsed.rows || []);
+      state.showSent = Array.isArray(parsed) ? false : !!parsed.showSent;
+
+      if (!Array.isArray(rows)) throw new Error("Formato inválido");
+
+      state.rows = rows.map(r => ({
+        id: r.id || uid(),
+        sent: typeof r.sent === "boolean" ? r.sent : false,
+        fecha: r.fecha || "",
+        tecnico: r.tecnico || "",
+        tipo: r.tipo || "",
+        equipo: r.equipo || "",
+        descripcion: r.descripcion || "",
+        obs: r.obs || "",
+        relacionado: r.relacionado || "",
+        notas: r.notas || "",
+      }));
+
+      render();
+      setMsg("Datos cargados.");
+    } catch {
+      setMsg("Error al cargar (datos corruptos)." );
+    }
+  }
+
+  function clearAll() {
+    state.rows = [];
+    saveLocal(true);
+    render();
+    setMsg("Todo borrado.");
+  }
+
+  // ===== Google Sheets (Enviar solo lo pendiente) =====
+  function getPendingRows() {
+    return state.rows.filter(r => !r.sent);
+  }
+
+  async function sendRowToSheets(r) {
+    if (!normalizeInput(SHEETS_ENDPOINT_URL)) {
+      throw new Error("Falta configurar SHEETS_ENDPOINT_URL.");
+    }
+
+    let subcat = "";
+    if (r.tipo === "Preventiva" && r.relacionado === "AA") {
+      subcat = "Aire Acondicionado";
+    }
+
+    const payload = {
+      fecha_ejecucion: r.fecha,
+      hora_ejecucion: "",
+      sede_id: "SED-001",
+      sector_id: "",
+      tecnico_principal_texto: r.tecnico,
+      tecnico_secundario_texto: "",
+      tipo_trabajo_texto: r.tipo,
+      relacionado_texto: r.relacionado,
+      subcategoria: subcat,
+      descripcion: r.descripcion,
+      observaciones: r.obs,
+      notas_adicionales: r.notas,
+      origen_registro: "Web técnico",
+      es_excepcion: false,
+      motivo_excepcion: "",
+      visible_en_informe: true,
+      periodo_informe: r.fecha ? r.fecha.substring(0, 7) : "",
+      equipos_texto: r.equipo
+    };
+
+    if (SHEETS_USE_TOKEN) {
+      payload.token = SHEETS_TOKEN;
+    }
+
+    const res = await fetch(SHEETS_ENDPOINT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      redirect: "follow",
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.success !== true) {
+      throw new Error(data.error || ("HTTP " + res.status));
+    }
+
+    return data;
+  }
+
+  async function sendPendingToSheets() {
+    const pending = getPendingRows();
+    if (pending.length === 0) { setMsg("No hay filas pendientes."); return; }
+
+    $("btnEnviarSheets").disabled = true;
+    setMsg(`Enviando ${pending.length} fila(s) a Google Sheets...`);
+
+    let successCount = 0;
+    try {
+      for (let i = 0; i < pending.length; i++) {
+        const row = pending[i];
+        setMsg(`Enviando fila ${i + 1} de ${pending.length}...`);
+        
+        await sendRowToSheets(row);
+        
+        const idx = state.rows.findIndex(x => x.id === row.id);
+        if (idx >= 0) {
+          state.rows[idx].sent = true;
+          saveLocal(true);
+          render();
+        }
+        successCount++;
+      }
+      setMsg("Listo ✅ Filas insertadas: " + successCount);
+    } catch (e) {
+      setMsg(`Error al enviar (enviadas ${successCount}): ` + (e?.message || e));
+      render();
+    }
+  }
+
+  // ===== Modal (Borrar todo) =====
+  function openModal() {
+    const o = $("modalOverlay");
+    o.style.display = "flex";
+    o.setAttribute("aria-hidden", "false");
+  }
+
+  function closeModal() {
+    const o = $("modalOverlay");
+    o.style.display = "none";
+    o.setAttribute("aria-hidden", "true");
+  }
+
+  // ===== Self-tests =====
+  function assert(name, cond) { if (!cond) throw new Error("Test falló: " + name); }
+  function runSelfTests() {
+    const prevSelected = Array.from(selectedTecnicos);
+    const prevTecnicoVal = $("tecnico").value;
+
+    try {
+      assert("normalizeInput trims", normalizeInput("  a ") === "a");
+      assert("csvCell quotes separator", csvCell("a;b").startsWith('"') && csvCell("a;b").endsWith('"'));
+      assert("csvCell quotes newline", csvCell("a\n1").startsWith('"') && csvCell("a\n1").endsWith('"'));
+
+      const tmp = [
+        { id:"1", sent:false, fecha:"", tecnico:"", tipo:"", equipo:"", descripcion:"", obs:"", relacionado:"", notas:"" },
+        { id:"2", sent:true,  fecha:"", tecnico:"", tipo:"", equipo:"", descripcion:"", obs:"", relacionado:"", notas:"" }
+      ];
+      assert("pending filter", tmp.filter(r => !r.sent).length === 1);
+
+      const csv = toCSV([{ fecha: "2026-02-03", tecnico: "Angel", tipo: "Preventiva", equipo: "UI-1.1", descripcion: "Mantención preventiva", obs: "", relacionado: "AA", notas: "" }]);
+      assert("toCSV contains newline", csv.includes("\n"));
+      assert("toCSV header present", csv.startsWith("Fecha" + CSV_SEPARATOR));
+
+      selectedTecnicos.clear();
+      selectedTecnicos.add("Angel");
+      selectedTecnicos.add("Antonia");
+      syncTecnicosHidden();
+      const t = $("tecnico").value;
+      assert("tecnicos join", t === "Angel / Antonia" || t === "Antonia / Angel");
+    } finally {
+      selectedTecnicos.clear();
+      prevSelected.forEach(x => selectedTecnicos.add(x));
+      $("tecnico").value = prevTecnicoVal;
+      syncTecnicosHidden();
+      renderTecnicosChips();
+    }
+  }
+
+  // ===== Events =====
+  $("tipo").addEventListener("change", () => { setDescripcionMode(false); toggleModoEquipos(); });
+  $("relacionado").addEventListener("change", () => { setDescripcionMode(false); toggleModoEquipos(); });
+
+  $("btnMasEquipo").addEventListener("click", () => { $("equiposList").appendChild(createEquipoInput()); });
+  $("btnMenosEquipo").addEventListener("click", () => {
+    const list = $("equiposList");
+    if (list.children.length > 1) list.removeChild(list.lastElementChild);
+  });
+
+  $("btnAgregar").addEventListener("click", addRowsFromForm);
+  $("btnLimpiarForm").addEventListener("click", () => {
+    const keepFecha = $("fecha").value;
+    clearFormKeepFecha();
+    $("fecha").value = keepFecha;
+    setMsg("Formulario limpio.");
+  });
+
+  $("btnGuardar").addEventListener("click", () => saveLocal(false));
+  $("btnCargar").addEventListener("click", loadLocal);
+
+  $("btnCSV").addEventListener("click", () => {
+    if (state.rows.length === 0) { setMsg("No hay filas para exportar."); return; }
+    const csv = toCSV(state.rows);
+    const fecha = state.rows[0]?.fecha || todayISO();
+    download("bitacora_" + fecha + ".csv", csv, "text/csv;charset=utf-8");
+    setMsg("CSV descargado.");
+  });
+
+  $("btnEnviarSheets").addEventListener("click", sendPendingToSheets);
+
+  $("btnToggleEnviados").addEventListener("click", () => {
+    state.showSent = !state.showSent;
+    saveLocal(true);
+    render();
+  });
+
+  $("btnCopiar").addEventListener("click", async () => {
+    if (state.rows.length === 0) { setMsg("No hay filas para copiar."); return; }
+    try { await copyTableAsTSV(); }
+    catch { setMsg("Tu navegador bloqueó el copiado (requiere HTTPS o permisos)." ); }
+  });
+
+  $("btnBorrarTodo").addEventListener("click", openModal);
+  $("btnModalCancel").addEventListener("click", closeModal);
+  $("btnModalOk").addEventListener("click", () => { closeModal(); clearAll(); });
+  $("modalOverlay").addEventListener("click", (e) => {
+    if (e.target === $("modalOverlay")) closeModal();
+  });
+
+  // ===== Init =====
+  $("fecha").value = todayISO();
+
+  selectedTecnicos.clear();
+  syncTecnicosHidden();
+  renderTecnicosChips();
+
+  setDescripcionMode(false);
+  toggleModoEquipos();
+
+  try { loadLocal(); } catch {}
+  try { runSelfTests(); } catch (e) { console.error(e); setMsg("Error interno: revisa la consola."); }
+
+  render();
+</script>
+</body>
+</html>
