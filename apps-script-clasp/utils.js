@@ -16,24 +16,33 @@ function getSheetByNameSafe(sheetName) {
 }
 
 function generateInboxId(sheet) {
-  var lastRow = sheet.getLastRow();
+  var props = PropertiesService.getScriptProperties();
+  var storedId = props.getProperty("LAST_INBOX_ID");
   var maxNumber = 0;
 
-  if (lastRow >= DATA_START_ROW) {
-    var idsRange = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, 1).getValues();
-    for (var i = 0; i < idsRange.length; i++) {
-      var cellValue = String(idsRange[i][0] || "").trim();
-      var match = cellValue.match(/REG-INBOX-(\d+)/);
-      if (match && match[1]) {
-        var currentNum = parseInt(match[1], 10);
-        if (currentNum > maxNumber) {
-          maxNumber = currentNum;
+  if (storedId) {
+    maxNumber = parseInt(storedId, 10);
+  } else {
+    // Inicialización segura: si la propiedad no existe, busca el mayor en la hoja actual
+    var lastRow = sheet.getLastRow();
+    if (lastRow >= DATA_START_ROW) {
+      var idsRange = sheet.getRange(DATA_START_ROW, 1, lastRow - DATA_START_ROW + 1, 1).getValues();
+      for (var i = 0; i < idsRange.length; i++) {
+        var cellValue = String(idsRange[i][0] || "").trim();
+        var match = cellValue.match(/REG-INBOX-(\d+)/);
+        if (match && match[1]) {
+          var currentNum = parseInt(match[1], 10);
+          if (currentNum > maxNumber) {
+            maxNumber = currentNum;
+          }
         }
       }
     }
   }
 
   var newNumber = maxNumber + 1;
+  props.setProperty("LAST_INBOX_ID", newNumber.toString());
+
   var paddedNumber = ("000000" + newNumber).slice(-6);
   return "REG-INBOX-" + paddedNumber;
 }
