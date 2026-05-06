@@ -367,3 +367,71 @@ function diagnosticarEstadoSistema() {
   Logger.log(JSON.stringify(resumen, null, 2));
   return resumen;
 }
+
+/**
+ * Valida la estructura de las hojas requeridas del sistema.
+ * 
+ * Reglas:
+ * - No modifica datos.
+ * - No borra filas.
+ * - No ejecuta pipeline.
+ * - Solo lee estructura y registra resumen con Logger.log().
+ */
+function validarEstructuraHojas() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var hojasRequeridas = [
+    "registros_inbox",
+    "registros_validacion",
+    "registros_bd",
+    "registro_detalle_equipos",
+    "historial_por_equipo",
+    "logs_pipeline"
+  ];
+  
+  var reporte = {
+    ok: true,
+    resultados: {},
+    errores: []
+  };
+
+  hojasRequeridas.forEach(function(nombreHoja) {
+    var hojaInfo = {
+      existe: false,
+      columnas: 0,
+      encabezados: [],
+      estructura_minima: false
+    };
+
+    var hoja = ss.getSheetByName(nombreHoja);
+    if (!hoja) {
+      hojaInfo.existe = false;
+      reporte.ok = false;
+      reporte.errores.push("La hoja '" + nombreHoja + "' no existe.");
+    } else {
+      hojaInfo.existe = true;
+      var lastCol = hoja.getLastColumn();
+      var lastRow = hoja.getLastRow();
+      hojaInfo.columnas = lastCol;
+
+      // logs_pipeline tiene 1 fila de encabezado. El resto tiene 3.
+      var filaEncabezados = (nombreHoja === "logs_pipeline") ? 1 : 3;
+
+      if (lastCol > 0 && lastRow >= filaEncabezados) {
+        hojaInfo.estructura_minima = true;
+        var valoresEncabezados = hoja.getRange(filaEncabezados, 1, 1, lastCol).getValues()[0];
+        hojaInfo.encabezados = valoresEncabezados.map(function(val) {
+          return String(val).trim();
+        });
+      } else {
+        hojaInfo.estructura_minima = false;
+        reporte.ok = false;
+        reporte.errores.push("La hoja '" + nombreHoja + "' no tiene estructura mínima o está vacía.");
+      }
+    }
+    
+    reporte.resultados[nombreHoja] = hojaInfo;
+  });
+
+  Logger.log(JSON.stringify(reporte, null, 2));
+  return reporte;
+}
