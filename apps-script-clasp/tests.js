@@ -291,3 +291,79 @@ function testPipelineE2EControlado() {
   Logger.log(JSON.stringify(resultado));
   return resultado;
 }
+
+/**
+ * Diagnóstico no destructivo del estado actual del sistema.
+ * Solo lee hojas y registra un resumen JSON con Logger.log().
+ */
+function diagnosticarEstadoSistema() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var hojas = [
+    "registros_inbox",
+    "registros_validacion",
+    "registros_bd",
+    "registro_detalle_equipos",
+    "historial_por_equipo",
+    "logs_pipeline"
+  ];
+  
+  var resumen = {
+    fecha_diagnostico: new Date().toISOString(),
+    hojas: {},
+    ultimo_evento_logs: null
+  };
+  
+  hojas.forEach(function(nombreHoja) {
+    var hoja = ss.getSheetByName(nombreHoja);
+    if (!hoja) {
+      resumen.hojas[nombreHoja] = "No existe";
+      return;
+    }
+    
+    var lastRow = hoja.getLastRow();
+    var lastCol = hoja.getLastColumn();
+    
+    // logs_pipeline tiene 1 fila de encabezado. El resto tiene 3.
+    var filasEncabezado = (nombreHoja === "logs_pipeline") ? 1 : 3;
+    var filasDatos = (lastRow > filasEncabezado) ? (lastRow - filasEncabezado) : 0;
+    
+    var tieneTest = false;
+    
+    if (filasDatos > 0 && lastCol > 0) {
+      var data = hoja.getRange(filasEncabezado + 1, 1, filasDatos, lastCol).getValues();
+      
+      for (var i = 0; i < data.length; i++) {
+        var row = data[i];
+        for (var j = 0; j < row.length; j++) {
+          var cellValue = String(row[j] || "").trim();
+          if (cellValue.indexOf("TEST_") === 0 || cellValue.indexOf("TEST-") === 0) {
+            tieneTest = true;
+            break;
+          }
+        }
+        if (tieneTest) break;
+      }
+      
+      // Capturar último evento en logs_pipeline
+      if (nombreHoja === "logs_pipeline") {
+        var ultimaFilaLog = data[data.length - 1]; // La última fila de datos
+        if (ultimaFilaLog && ultimaFilaLog.length >= 2) {
+          resumen.ultimo_evento_logs = {
+            timestamp: String(ultimaFilaLog[0]),
+            evento: String(ultimaFilaLog[1])
+          };
+        }
+      }
+    }
+    
+    resumen.hojas[nombreHoja] = {
+      filas_totales: lastRow,
+      filas_datos_reales: filasDatos,
+      contiene_basura_test: tieneTest
+    };
+  });
+  
+  // Resumen final en formato JSON mediante Logger
+  Logger.log(JSON.stringify(resumen, null, 2));
+  return resumen;
+}
