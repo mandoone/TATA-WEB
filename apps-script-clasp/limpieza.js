@@ -202,3 +202,61 @@ function configurarFormatosColumnasCriticas() {
     Logger.log("Formatos aplicados en: " + nombreHoja);
   }
 }
+
+/**
+ * Función segura para limpiar filas de prueba generadas por testPipelineE2EControlado().
+ * No usar clearContent masivo, sino borrado quirúrgico de abajo hacia arriba.
+ */
+function limpiarDatosDePrueba() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var hojas = [
+    "registros_inbox",
+    "registros_validacion",
+    "registros_bd",
+    "registro_detalle_equipos",
+    "historial_por_equipo"
+  ];
+  
+  var totalEliminado = 0;
+  
+  hojas.forEach(function(nombreHoja) {
+    var hoja = ss.getSheetByName(nombreHoja);
+    if (!hoja) return; // Ignora hojas inexistentes sin romper ejecución
+    
+    var lastRow = hoja.getLastRow();
+    var lastCol = hoja.getLastColumn();
+    
+    if (lastRow < 4 || lastCol < 1) {
+      return; // No hay datos
+    }
+    
+    var data = hoja.getRange(4, 1, lastRow - 3, lastCol).getValues();
+    var filasEliminadas = 0;
+    
+    // Recorrer de abajo hacia arriba para evitar saltos de índice
+    for (var i = data.length - 1; i >= 0; i--) {
+      var row = data[i];
+      var esPrueba = false;
+      
+      for (var j = 0; j < row.length; j++) {
+        var cellValue = String(row[j] || "").trim();
+        // Criterio exacto: contiene un valor de texto que comience con "TEST_" o "TEST-"
+        if (cellValue.indexOf("TEST_") === 0 || cellValue.indexOf("TEST-") === 0) {
+          esPrueba = true;
+          break;
+        }
+      }
+      
+      if (esPrueba) {
+        var filaReal = i + 4; // Índice en arreglo (0) + 4 (fila inicio) = 4
+        hoja.deleteRow(filaReal);
+        filasEliminadas++;
+      }
+    }
+    
+    totalEliminado += filasEliminadas;
+    Logger.log("Hoja: " + nombreHoja + " | Filas eliminadas: " + filasEliminadas);
+  });
+  
+  Logger.log("TOTAL ELIMINADO en todas las hojas: " + totalEliminado + " filas.");
+}
