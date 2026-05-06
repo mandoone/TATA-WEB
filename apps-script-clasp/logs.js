@@ -5,9 +5,6 @@
 
 function appendPipelineLog(logObj) {
   try {
-    // Siempre registrar en consola para trazabilidad completa
-    Logger.log(JSON.stringify(logObj));
-
     // El filtro aplica solo a persistencia en hoja
     if (logObj.evento !== "pipeline_fin" && logObj.evento !== "pipeline_error") {
       return;
