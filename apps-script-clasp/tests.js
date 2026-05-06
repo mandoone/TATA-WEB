@@ -304,7 +304,8 @@ function diagnosticarEstadoSistema() {
     "registros_bd",
     "registro_detalle_equipos",
     "historial_por_equipo",
-    "logs_pipeline"
+    "logs_pipeline",
+    "equipos_maestro"
   ];
   
   var resumen = {
@@ -385,7 +386,8 @@ function validarEstructuraHojas() {
     "registros_bd",
     "registro_detalle_equipos",
     "historial_por_equipo",
-    "logs_pipeline"
+    "logs_pipeline",
+    "equipos_maestro"
   ];
   
   var reporte = {
