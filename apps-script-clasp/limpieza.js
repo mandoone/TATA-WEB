@@ -260,3 +260,35 @@ function limpiarDatosDePrueba() {
   
   Logger.log("TOTAL ELIMINADO en todas las hojas: " + totalEliminado + " filas.");
 }
+
+/**
+ * Crea la hoja 'equipos_maestro' si no existe.
+ * Prepara los encabezados en la fila 3 dejando filas 1 y 2 para uso futuro.
+ */
+function crearHojaEquiposMaestro() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var nombreHoja = "equipos_maestro";
+  var hoja = ss.getSheetByName(nombreHoja);
+  
+  var headers = [
+    "codigo_equipo",
+    "equipo_id",
+    "nombre_equipo",
+    "sede_id",
+    "sector_id",
+    "tipo_equipo",
+    "estado",
+    "observaciones"
+  ];
+
+  if (hoja) {
+    Logger.log("La hoja '" + nombreHoja + "' ya existe. No se recreó.");
+    return;
+  }
+  
+  hoja = ss.insertSheet(nombreHoja);
+  Logger.log("Hoja '" + nombreHoja + "' creada exitosamente.");
+  
+  hoja.getRange(3, 1, 1, headers.length).setValues([headers]);
+  Logger.log("Headers aplicados en fila 3: " + headers.join(", "));
+}
